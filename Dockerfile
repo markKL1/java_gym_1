@@ -1,8 +1,6 @@
 
 FROM rust:1.36.0
 
-#TODO @mverleg: as seen in "debug/" the problem isn't with Docker, it's with Cargo
-
 RUN export RUST_BACKTRACE=1 && \
     export http_proxy=http://proxy2.keylane.local:3128 && \
     export shttp_proxy=http://proxy2.keylane.local:3128 && \
