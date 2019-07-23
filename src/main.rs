@@ -140,18 +140,18 @@ fn solve_par(points: &mut [Point]) -> (Point, Point) {
 
 fn main() {
     println!("Welcome to Rust gym 1");
-    const REPS: u128 = 10;
-    let mut total_ms = 0;
+    const REPS: u128 = 20;
+    let mut total_ms = 0.0;
     let mut now = Instant::now();
-    let calculata_reference = true;
-    let expected_dist2 = if calculata_reference {
+    let calculate_reference = false;
+    let expected_dist2 = if calculate_reference {
         println!("solving brute-force to find reference distance");
         let points = read_data();
         let (refp1, refp2) = solve_naive(&points);
         let expected_dist1 = refp1.dist2(&refp2).sqrt();
         // expected minimum distance 430.809 found in 40833 ms
         println!("expected minimum distance {0:.3} found in {1:} ms",
-                 expected_dist1.sqrt(), now.elapsed().as_millis());
+                 expected_dist1.sqrt(), now.elapsed().as_nanos() as f64 / 1_000_000.0);
         expected_dist1
     } else {
         430.80863789034777
@@ -160,13 +160,13 @@ fn main() {
         let mut points = read_data();
         now = Instant::now();
         let (p1, p2) = solve_par(&mut points);
-        let duration = now.elapsed().as_millis();
+        let duration = now.elapsed().as_nanos() as f64 / 1_000_000.0;
         total_ms += duration;
         let actual_dist1 = p1.dist2(&p2).sqrt();
         println!("rep {0:}: distance {1:.3} in {2:.3} ms",
                  rep, actual_dist1, duration);
         assert!(actual_dist1 < expected_dist2 * 1.000001, "not the shortest distance");
     }
-    println!("took {0:.3} ms for {1:} points", total_ms / REPS, read_data().len())
+    println!("took {0:.3} ms for {1:} points", total_ms / (REPS as f64), read_data().len())
 }
 
