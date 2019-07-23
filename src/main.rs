@@ -82,15 +82,20 @@ fn solve(points: &mut [Point]) -> (Point, Point) {
 
 fn main() {
     println!("Welcome to Rust gym 1");
-    let original_points = read_data();
-    let mut points = original_points.clone();
-    let now = Instant::now();
-    let (p1, p2) = solve(&mut points);
-    let duration = now.elapsed().as_millis();
-    let expected_dist2 = original_points[55419].dist2(&original_points[152023]);
-    println!("found distance {0:.3}", expected_dist2.sqrt());
-    let actual_dist2 = p1.dist2(&p2);
-    assert!(actual_dist2 < expected_dist2 * 1.001, "not the shortest distance");
-    println!("took {0:.3} ms for {1:} points", duration, points.len())
+    const REPS: u128 = 10;
+    let mut total_ms = 0;
+    for _ in 0..REPS {
+        let original_points = read_data();
+        let mut points = original_points.clone();
+        let now = Instant::now();
+        let (p1, p2) = solve(&mut points);
+        let duration = now.elapsed().as_millis();
+        total_ms += duration;
+        let expected_dist2 = original_points[55419].dist2(&original_points[152023]);
+        println!("found distance {0:.3}", expected_dist2.sqrt());
+        let actual_dist2 = p1.dist2(&p2);
+        assert!(actual_dist2 < expected_dist2 * 1.001, "not the shortest distance");
+    }
+    println!("took {0:.3} ms for {1:} points", total_ms / REPS, read_data().len())
 }
 
