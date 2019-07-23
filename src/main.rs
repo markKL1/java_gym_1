@@ -108,22 +108,34 @@ fn solve(points: &mut [Point]) -> (Point, Point) {
 }
 
 #[allow(dead_code)]
-//TODO @mverleg: https://docs.rs/rayon/1.1.0/rayon/slice/trait.ParallelSliceMut.html#method.par_sort_unstable
 fn solve_par(points: &mut [Point]) -> (Point, Point) {
 
-    // Step 1: sort by X-coordinate
-    points.par_sort_unstable_by(|p1, p2| p1.x.partial_cmp(&p2.x).unwrap());
+    let initial_search_preference = 1;
+    let batch_size = 32;
 
-    // Step 2: do some serial searching to set the initial minimum lower
+    // Sort by X-coordinate
+    points.par_sort_unstable_by(|p1, p2| p1.x.partial_cmp(&p2.x).unwrap());
+    let length = points.len();
+
+    // Find how much to do serially
     let mut initial_minimum = Minimum::new(
         points[0].clone(),
         points[1].clone(),
     );
-    let initial_search_preference = 8;
-    let initial_search = if points.len() < initial_search_preference { points.len() } else { initial_search_preference };
-    for i in 0..initial_search {
+    let mut initial_search = length % batch_size;
+    while initial_search < initial_search_preference {
+        initial_search += batch_size;
+    }
+    if initial_search > length {
+        initial_search = length;
+    }
+    let batch_count = (length - initial_search) / batch_size;
+
+    // Do some serial searching at the end, to set the initial minimum lower
+    let initial_search = if length < initial_search_preference { length } else { initial_search_preference };
+    for i in (length - initial_search)..length {
         let p1 = points[i];
-        for j in (i + 1)..points.len() {
+        for j in (i + 1)..length {
             let p2 = points[j];
             if p2.x - p1.x > initial_minimum.dist1 {
                 break;
@@ -138,30 +150,32 @@ fn solve_par(points: &mut [Point]) -> (Point, Point) {
     }
     let global_minimum = Mutex::new(initial_minimum);
 
-    // Step 3: use parallel search for the rest of it
-    (initial_search..points.len()).into_par_iter()
-        .for_each(|i| {
-            //TODO @mverleg: batches
-            let p1 = points[i];
+    // Use parallel search for the rest of it
+    (0..batch_count).into_par_iter()
+        .for_each(|batch_nr| {
             let mut local_minimum: Minimum = {
                 (global_minimum.lock().unwrap()).clone()
             };
-            for j in (i + 1)..points.len() {
-                let p2 = points[j];
-                if p2.x - p1.x > local_minimum.dist1 {
-                    break;
-                }
-                if p1.dist2(&p2) < local_minimum.dist2 {
-//                    println!("Potentially updating minimum to {}", p1.dist2(&p2).sqrt());
-                    let mut global_minimum_ref = global_minimum.lock().unwrap();
-                    if p1.dist2(&p2) < global_minimum_ref.dist2 {
-//                        println!("  Definitely updating");
-                        *global_minimum_ref = Minimum::new(
-                            p1.clone(),
-                            p2.clone(),
-                        );
+            let offset = batch_nr * batch_size;
+            for i in offset..(offset + batch_size) {
+                let p1 = points[i];
+                for j in (i + 1)..length {
+                    let p2 = points[j];
+                    if p2.x - p1.x > local_minimum.dist1 {
+                        break;
                     }
-                    local_minimum = global_minimum_ref.clone();
+                    if p1.dist2(&p2) < local_minimum.dist2 {
+//                    println!("Potentially updating minimum to {}", p1.dist2(&p2).sqrt());
+                        let mut global_minimum_ref = global_minimum.lock().unwrap();
+                        if p1.dist2(&p2) < global_minimum_ref.dist2 {
+//                        println!("  Definitely updating");
+                            *global_minimum_ref = Minimum::new(
+                                p1.clone(),
+                                p2.clone(),
+                            );
+                        }
+                        local_minimum = global_minimum_ref.clone();
+                    }
                 }
             }
         });
