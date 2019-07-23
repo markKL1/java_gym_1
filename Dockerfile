@@ -1,13 +1,18 @@
 
 FROM rust:1.36.0
 
-ENV RUST_BACKTRACE=1
-ENV http_proxy=proxy1.keylane.local:3128
-ENV shttp_proxy=proxy1.keylane.local:3128
-ENV ftp_proxy=proxy1.keylane.local:3128
-
-RUN mkdir "/root/.cargo" && \
-    printf '[http]\nproxy = "http://localhost:3128"\nsslVerify = "false"\n\n[https]\nproxy = "https://localhost:3128"\nsslVerify = "false"\n\n' > "/root/.cargo/config"
+RUN export RUST_BACKTRACE=1 && \
+    export http_proxy=proxy1.keylane.local:3128 && \
+    export shttp_proxy=proxy1.keylane.local:3128 && \
+    export ftp_proxy=proxy1.keylane.local:3128 && \
+    export HTTP_PROXY=proxy1.keylane.local:3128 && \
+    export SHTTP_PROXY=proxy1.keylane.local:3128 && \
+    export FTP_PROXY=proxy1.keylane.local:3128 && \
+    mkdir ".cargo" && \
+    printf "[http]\nproxy = \"http://localhost:3128\"\nsslVerify = false\ncheck-revoke = false\n\n" > ".cargo/config" && \
+    printf "[https]\nproxy = \"https://localhost:3128\"\nsslVerify = false\ncheck-revoke = false\n\n" >> ".cargo/config" && \
+    git config --global http.proxy proxy1.keylane.local:3128 && \
+    git config --global https.proxy proxy1.keylane.local:3128
 
 WORKDIR /code/gym/
 
@@ -22,4 +27,5 @@ COPY src/ ./src/
 
 RUN cargo build --release
 
-CMD ["./target/release/rust_gym_1"]
+#CMD ["./target/release/rust_gym_1"]
+CMD ["cargo", "run", "--release"]

@@ -84,7 +84,7 @@ fn solve(points: &mut [Point]) -> (Point, Point) {
     );
     for i in 0..points.len() {
         let p1 = points[i];
-        for j in (i + 1)..points.len() {
+        for j in i..points.len() {
             let p2 = points[j];
             if p2.x - p1.x > minimum.dist1 {
                 break;
@@ -101,48 +101,54 @@ fn solve(points: &mut [Point]) -> (Point, Point) {
 }
 
 //TODO @mverleg: https://docs.rs/rayon/1.1.0/rayon/slice/trait.ParallelSliceMut.html#method.par_sort_unstable
-fn solve_par(points: &mut [Point]) -> (Point, Point) {
-
-    // Step 1: sort by X-coordinate
-    points.par_sort_unstable_by(|p1, p2| p1.x.partial_cmp(&p2.x).unwrap());
-
-    let mut minimum = Minimum::new(
-        points[0].clone(),
-        points[1].clone(),
-    );
-
-    // Step 2: find nearest per block
-    for i in 0..points.len() {
-        let p1 = points[i];
-        for j in (i + 1)..points.len() {
-            let p2 = points[j];
-            if p2.x - p1.x > minimum.dist1 {
-                break;
-            }
-            if p1.dist2(&p2) < minimum.dist2 {
-                minimum = Minimum::new(
-                    p1.clone(),
-                    p2.clone(),
-                );
-            }
-        }
-    }
-
-    // Step 3: combine blocks
-    (minimum.point1, minimum.point2)
-}
+//fn solve_par(points: &mut [Point]) -> (Point, Point) {
+//
+//    // Step 1: sort by X-coordinate
+//    points.par_sort_unstable_by(|p1, p2| p1.x.partial_cmp(&p2.x).unwrap());
+//
+//    let mut minimum = Minimum::new(
+//        points[0].clone(),
+//        points[1].clone(),
+//    );
+//
+//    // Step 2: find nearest per block
+//    for i in 0..points.len() {
+//        let p1 = points[i];
+//        for j in (i + 1)..points.len() {
+//            let p2 = points[j];
+//            if p2.x - p1.x > minimum.dist1 {
+//                break;
+//            }
+//            if p1.dist2(&p2) < minimum.dist2 {
+//                minimum = Minimum::new(
+//                    p1.clone(),
+//                    p2.clone(),
+//                );
+//            }
+//        }
+//    }
+//
+//    // Step 3: combine blocks
+//    (minimum.point1, minimum.point2)
+//}
 
 fn main() {
     println!("Welcome to Rust gym 1");
     const REPS: u128 = 10;
     let mut total_ms = 0;
     let mut now = Instant::now();
-    println!("solving brute-force to find reference distance");
-    let points = read_data();
-    let (refp1, refp2) = solve_naive(&points);
-    let expected_dist2 = refp1.dist2(&refp2).sqrt();
-    println!("expected minimum distance {0:.3} found in {1:} ms",
-             expected_dist2.sqrt(), now.elapsed().as_millis());
+    let calculata_reference = false;
+    let expected_dist2 = if calculata_reference {
+        println!("solving brute-force to find reference distance");
+        let points = read_data();
+        let (refp1, refp2) = solve_naive(&points);
+        let expected_dist2 = refp1.dist2(&refp2).sqrt();
+        // expected minimum distance 20.756 found in 40833 ms
+        println!("expected minimum distance {0:.3} found in {1:} ms",
+                 expected_dist2.sqrt(), now.elapsed().as_millis());
+    } else {
+        20.756
+    };
     for _ in 0..REPS {
         let mut points = read_data();
         now = Instant::now();
