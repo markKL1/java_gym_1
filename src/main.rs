@@ -1,9 +1,12 @@
+use ::rayon::prelude::*;
 use ::rayon::slice::ParallelSliceMut;
 use ::std::fs;
+use ::std::sync::Mutex;
 use ::std::time::Instant;
 
 type CoordType = f64;
 
+//TODO @mverleg: try with and without copy
 #[derive(Debug, PartialEq, Clone, Copy)]
 struct Point {
     x: CoordType,
@@ -19,6 +22,7 @@ impl Point {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Minimum {
     point1: Point,
     point2: Point,
@@ -110,32 +114,47 @@ fn solve_par(points: &mut [Point]) -> (Point, Point) {
     // Step 1: sort by X-coordinate
     points.par_sort_unstable_by(|p1, p2| p1.x.partial_cmp(&p2.x).unwrap());
 
-    let mut minimum = Minimum::new(
+    let global_minimum = Mutex::new(Minimum::new(
         points[0].clone(),
         points[1].clone(),
-    );
+    ));
 
-    // Step 2: find nearest per block
-    for i in 0..points.len() {
-        let p1 = points[i];
-        for j in (i + 1)..points.len() {
-            let p2 = points[j];
-            if p2.x - p1.x > minimum.dist1 {
-//                println!("break at: {}", (p2.x - p1.x).sqrt());  //TODO @mverleg: TEMPORARY! REMOVE THIS!
-                break;
+    // Step 2: find nearest
+    (0..points.len()).into_par_iter()
+        .for_each(|i| {
+            //TODO @mverleg: batches
+            let p1 = points[i];
+            let mut local_minimum: Minimum = {
+                (global_minimum.lock().unwrap()).clone()
+            };
+            for j in (i + 1)..points.len() {
+                let p2 = points[j];
+                if p2.x - p1.x > local_minimum.dist1 {
+                    break;
+                }
+                if p1.dist2(&p2) < local_minimum.dist2 {
+                    let mut global_minimum_ref = global_minimum.lock().unwrap();
+                    if p1.dist2(&p2) < global_minimum_ref.dist2 {
+                        *global_minimum_ref = Minimum::new(
+                            p1.clone(),
+                            p2.clone(),
+                        );
+                        local_minimum = global_minimum_ref.clone();
+                        //TODO @mverleg: set local minimum too
+                    }
+//                    global_minimum = Minimum::new(
+//                        p1.clone(),
+//                        p2.clone(),
+//                    );
+                }
             }
-            if p1.dist2(&p2) < minimum.dist2 {
-//                println!("shorter: {}", p1.dist2(&p2).sqrt());  //TODO @mverleg: TEMPORARY! REMOVE THIS!
-                minimum = Minimum::new(
-                    p1.clone(),
-                    p2.clone(),
-                );
-            }
-        }
+        });
+
+    // Step 3: profit
+    {
+        let global_minimum_ref = global_minimum.lock().unwrap();
+        (global_minimum_ref.point1, global_minimum_ref.point2)
     }
-
-    // Step 3: combine blocks
-    (minimum.point1, minimum.point2)
 }
 
 fn main() {
