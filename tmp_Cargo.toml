@@ -1,0 +1,17 @@
+[package]
+name = "rust_gym_1"
+version = "1.0.0"
+authors = ["Mark"]
+edition = "2018"
+publish = false
+
+[[bin]]
+name = "rust_gym_1"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+
+[dependencies]
+#csv = "1.0.0-beta.1"
+rayon = "1.1.0"
