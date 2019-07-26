@@ -12,7 +12,6 @@ mod naive;
 mod xsort;
 mod boxing;
 
-
 fn main() {
     println!("Welcome to Rust gym 1");
 //    let calculate_reference = false;
