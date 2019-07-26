@@ -1,15 +1,16 @@
-use crate::util::{Point, Minimum, CoordType};
 use ::smallvec::SmallVec;
 use ::std::fmt;
+
+use crate::util::{CoordType, Minimum, Point};
 
 #[derive(Debug)]
 struct BoundingBox {
     min_x: CoordType,
-    max_x: CoordType,
+    length_x: CoordType,
     min_y: CoordType,
-    max_y: CoordType,
+    length_y: CoordType,
     min_z: CoordType,
-    max_z: CoordType,
+    length_z: CoordType,
 }
 
 #[derive(Debug, Clone)]
@@ -18,14 +19,42 @@ struct PointCubeXAssignment {
     x_cube_nr: usize,
 }
 
+//TODO @mverleg: which fields are used?
 struct Cubes {
-    rib_len: CoordType,
+    bbox: BoundingBox,
+    rib_length: CoordType,
     x_cnt: usize,
     y_cnt: usize,
     z_cnt: usize,
     yz_cnt: usize,
     total_cnt: usize,
     data: Vec<Vec<PointCubeXAssignment>>
+}
+
+impl Cubes {
+    fn yz_to_index(&self, y: usize, z: usize) -> usize {
+        debug_assert!(y < self.y_cnt);
+        debug_assert!(z < self.z_cnt);
+        y + self.y_cnt * z
+    }
+
+    fn xpos_to_xindex(&self, pos: CoordType) -> usize {
+        ((pos - self.bbox.min_x) / self.rib_length).floor() as usize
+    }
+
+    fn add_to_xrow(&mut self, y: usize, z: usize, point: Point) {
+        let yz_index = yz_to_index(y, z);
+        let x_cube_nr = 0;
+        let point_assignment = PointCubeXAssignment {
+            point,
+            x_cube_nr,
+        };
+        data[index].push(point_assignment);
+    }
+
+    fn sort(&mut self) {
+
+    }
 }
 
 impl fmt::Debug for Cubes {
@@ -47,17 +76,18 @@ impl BoundingBox {
         (self.max_z - self.min_z)
     }
 
-    fn calc_cubes(&self, rib_len: CoordType, point_cnt: usize) -> Cubes {
-        let x_cnt = ((self.max_x - self.min_x) / rib_len).ceil() as usize;
-        let y_cnt = ((self.max_y - self.min_y) / rib_len).ceil() as usize;
-        let z_cnt = ((self.max_z - self.min_z) / rib_len).ceil() as usize;
+    fn calc_cubes(self, rib_len: CoordType, point_cnt: usize) -> Cubes {
+        let x_cnt = (self.length_x / rib_len).ceil() as usize;
+        let y_cnt = (self.length_y / rib_len).ceil() as usize;
+        let z_cnt = (self.length_z / rib_len).ceil() as usize;
         let yz_cnt = y_cnt * z_cnt;
         let total_cnt = x_cnt * yz_cnt;
-        let yz_bin_expected_cnt = 2 * (1 + point_cnt / yz_cnt);
-        //TODO @mark: TUNE the size of smallvec
+        //TODO @mverleg: tune capacity
+        let yz_bin_expected_cnt = (1 + point_cnt / yz_cnt);
         let data = vec![Vec::with_capacity(yz_bin_expected_cnt); yz_cnt];
         Cubes {
-            rib_len,
+            bbox: self,
+            rib_length: rib_len,
             x_cnt,
             y_cnt,
             z_cnt,
@@ -66,42 +96,43 @@ impl BoundingBox {
             data,
         }
     }
-
-    fn get(&self) {
-
-    }
 }
 
 fn find_extrema(points: &[Point]) -> BoundingBox {
-    let mut bbox = BoundingBox {
-        min_x : points[0].x,
-        max_x : points[0].x,
-        min_y : points[0].y,
-        max_y : points[0].y,
-        min_z : points[0].z,
-        max_z : points[0].z,
-    };
+    let mut min_x: CoordType = points[0].x;
+    let mut max_x: CoordType = points[0].x;
+    let mut min_y: CoordType = points[0].y;
+    let mut max_y: CoordType = points[0].y;
+    let mut min_z: CoordType = points[0].z;
+    let mut max_z: CoordType = points[0].z;
     for point in points {
         if point.x < bbox.min_x {
-            bbox.min_x = point.x;
+            min_x = point.x;
         }
         if point.x > bbox.max_x {
-            bbox.max_x = point.x;
+            max_x = point.x;
         }
         if point.y < bbox.min_y {
-            bbox.min_y = point.y;
+            min_y = point.y;
         }
         if point.y > bbox.max_y {
-            bbox.max_y = point.y;
+            max_y = point.y;
         }
         if point.z < bbox.min_z {
-            bbox.min_z = point.z;
+            min_z = point.z;
         }
         if point.z > bbox.max_z {
-            bbox.max_z = point.z;
+            max_z = point.z;
         }
     }
-    bbox
+    BoundingBox {
+        min_x,
+        length_x: max_x - min_x,
+        min_y,
+        length_y: max_y - min_y,
+        min_z,
+        length_z: max_z - min_z,
+    }
 }
 
 // Minimum cube rib length to still find the nearest pair even if totally homogeneous
@@ -109,11 +140,18 @@ fn min_cube_size(bounding_box: &BoundingBox, point_cnt: usize) -> CoordType {
     (bounding_box.volume() / point_cnt as f64).cbrt()
 }
 
+fn assign_points_to_cubes(points: &[Point], bbox: &BoundingBox, grid: &mut Cubes) {
+    for point in points {
+
+    }
+}
+
 #[allow(dead_code)]
 pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
     let bbox = find_extrema(points);
     let min_len = min_cube_size(&bbox, points.len());
-    let box_size = min_len;
+    //TODO @mverleg: tune box_size
+    let box_size = 3 * min_len;
     let cubes = bbox.calc_cubes(box_size, points.len());
     println!("cubes: {:?}", cubes);
 
