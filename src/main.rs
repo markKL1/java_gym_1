@@ -1,6 +1,10 @@
+#[allow(unused_imports)]
 use crate::naive::solve_naive;
+#[allow(unused_imports)]
 use crate::util::{read_data, bench};
+#[allow(unused_imports)]
 use crate::xsort::xsort_par;
+#[allow(unused_imports)]
 use crate::boxing::boxing_ser;
 
 mod util;
@@ -23,7 +27,6 @@ fn main() {
 //    } else {
 //        430.80863789034777
 //    };
-    bench("xsort_par", xsort_par, 20);
+//    bench("xsort_par", xsort_par, 20);
     bench("boxing_ser", boxing_ser, 20);
 }
-
