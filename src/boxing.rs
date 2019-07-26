@@ -1,4 +1,5 @@
 use crate::util::{Point, Minimum, CoordType};
+use smallvec::SmallVec;
 
 #[derive(Debug)]
 struct BoundingBox {
@@ -33,6 +34,8 @@ impl BoundingBox {
         let z_cnt = ((self.max_z - self.min_z) / rib_len).ceil() as usize;
         let xy_cnt = x_cnt * y_cnt;
         let total_cnt = xy_cnt * z_cnt;
+        //TODO @mark: TUNE the size of smallvec
+        let data: Vec::<SmallVec<[Point; 4]>>::fill(total_cnt);
         Cubes {
             rib_len,
             x_cnt,
@@ -40,6 +43,7 @@ impl BoundingBox {
             z_cnt,
             xy_cnt,
             total_cnt,
+            data,
         }
     }
 
