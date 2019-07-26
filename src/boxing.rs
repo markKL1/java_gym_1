@@ -52,19 +52,28 @@ impl Cubes {
         self.data[yz_index].push(point_assignment);
     }
 
-    fn sort(&mut self) {
+    fn get_xpoints(&self, yz_index: usize) -> &[Point] {
+        debug_assert!(yz_index < self.yz_cnt);
+        &self.data[yz_index]
+    }
 
+    fn sort(&mut self) {
+        // TODO @mverleg: parallel?
+        for xrow in &mut self.data {
+            // TODO @mverleg: unstable sort?
+            xrow.sort_by(|p1, p2| p1.x_cube_nr.partial_cmp(&p2.x_cube_nr).unwrap());
+        }
     }
 }
 
 impl fmt::Debug for Cubes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str("Cubes[")?;
-        f.write_str(&format!("{}", self.x_cnt));
-        f.write_str(" x ");
-        f.write_str(&format!("{}", self.y_cnt));
-        f.write_str(" x ");
-        f.write_str(&format!("{}", self.z_cnt));
+        f.write_str(&format!("{}", self.x_cnt))?;
+        f.write_str(" x ")?;
+        f.write_str(&format!("{}", self.y_cnt))?;
+        f.write_str(" x ")?;
+        f.write_str(&format!("{}", self.z_cnt))?;
         f.write_str("]")
     }
 }
@@ -148,6 +157,27 @@ fn assign_points_to_cubes(points: &[Point], grid: &mut Cubes) {
     grid.sort();
 }
 
+fn find_nearest_points(grid: &Cubes) -> (Point, Point) {
+    //TODO @mverleg: paralellize
+    for yz_ind in 0..grid.yz_cnt {
+        // For each x-row
+        let xbox_ind = 0;
+        let row = grid.get_xpoints(yx_ind);
+        for left_x_ind in 0..row.len() {
+            let left_xpoint = row[left_x_ind];
+            for right_x_ind in (left_x_ind + 1)..row.len() {
+                let mut right_xpoint = row[right_x_ind];
+                if right_xpoint.x_cube_nr > left_xpoint.x_cube_nr + 1 {
+                    // More than one cube apart, go to the next left point
+                    break;
+                }
+                //TODO @mverleg:
+            }
+        }
+    }
+    unimplemented!()
+}
+
 #[allow(dead_code)]
 pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
     let bbox = find_extrema(points);
@@ -157,7 +187,7 @@ pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
     let mut cubes = bbox.calc_cubes(box_size, points.len());
     println!("cubes: {:?}", &cubes);
     assign_points_to_cubes(points, &mut cubes);
-
+    find_nearest_points(&cubes)
 
 //    let mut minimum = Minimum::new(
 //        points[0].clone(),
@@ -176,5 +206,5 @@ pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
 //        }
 //    }
 //    (minimum.point1, minimum.point2)
-    unimplemented!();
+    //unimplemented!();
 }
