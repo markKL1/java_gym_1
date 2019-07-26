@@ -38,18 +38,18 @@ impl Cubes {
         y + self.y_cnt * z
     }
 
-    fn xpos_to_xindex(&self, pos: CoordType) -> usize {
-        ((pos - self.bbox.min_x) / self.rib_length).floor() as usize
+    fn pos_to_index(&self, pos: CoordType, minimum: CoordType) -> usize {
+        ((pos - minimum) / self.rib_length).floor() as usize
     }
 
     fn add_to_xrow(&mut self, y: usize, z: usize, point: Point) {
-        let yz_index = yz_to_index(y, z);
+        let yz_index = self.yz_to_index(y, z);
         let x_cube_nr = 0;
         let point_assignment = PointCubeXAssignment {
             point,
             x_cube_nr,
         };
-        data[index].push(point_assignment);
+        self.data[yz_index].push(point_assignment);
     }
 
     fn sort(&mut self) {
@@ -71,9 +71,7 @@ impl fmt::Debug for Cubes {
 
 impl BoundingBox {
     fn volume(&self) -> CoordType {
-        (self.max_x - self.min_x) *
-        (self.max_y - self.min_y) *
-        (self.max_z - self.min_z)
+        self.length_x * self.length_y * self.length_z
     }
 
     fn calc_cubes(self, rib_len: CoordType, point_cnt: usize) -> Cubes {
@@ -106,22 +104,22 @@ fn find_extrema(points: &[Point]) -> BoundingBox {
     let mut min_z: CoordType = points[0].z;
     let mut max_z: CoordType = points[0].z;
     for point in points {
-        if point.x < bbox.min_x {
+        if point.x < min_x {
             min_x = point.x;
         }
-        if point.x > bbox.max_x {
+        if point.x > max_x {
             max_x = point.x;
         }
-        if point.y < bbox.min_y {
+        if point.y < min_y {
             min_y = point.y;
         }
-        if point.y > bbox.max_y {
+        if point.y > max_y {
             max_y = point.y;
         }
-        if point.z < bbox.min_z {
+        if point.z < min_z {
             min_z = point.z;
         }
-        if point.z > bbox.max_z {
+        if point.z > max_z {
             max_z = point.z;
         }
     }
@@ -140,10 +138,14 @@ fn min_cube_size(bounding_box: &BoundingBox, point_cnt: usize) -> CoordType {
     (bounding_box.volume() / point_cnt as f64).cbrt()
 }
 
-fn assign_points_to_cubes(points: &[Point], bbox: &BoundingBox, grid: &mut Cubes) {
+fn assign_points_to_cubes(points: &[Point], grid: &mut Cubes) {
     for point in points {
-
+        let y = grid.pos_to_index(point.y, grid.bbox.min_y);
+        let z = grid.pos_to_index(point.z, grid.bbox.min_z);
+        //TODO @mverleg: get rid of clone?
+        grid.add_to_xrow(y, z, point.clone());
     }
+    grid.sort();
 }
 
 #[allow(dead_code)]
@@ -151,10 +153,10 @@ pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
     let bbox = find_extrema(points);
     let min_len = min_cube_size(&bbox, points.len());
     //TODO @mverleg: tune box_size
-    let box_size = 3 * min_len;
-    let cubes = bbox.calc_cubes(box_size, points.len());
-    println!("cubes: {:?}", cubes);
-
+    let box_size = 3.0 * min_len;
+    let mut cubes = bbox.calc_cubes(box_size, points.len());
+    println!("cubes: {:?}", &cubes);
+    assign_points_to_cubes(points, &mut cubes);
 
 
 //    let mut minimum = Minimum::new(
@@ -174,5 +176,5 @@ pub fn boxing_ser(points: &mut [Point]) -> (Point, Point) {
 //        }
 //    }
 //    (minimum.point1, minimum.point2)
-    panic!();
+    unimplemented!();
 }

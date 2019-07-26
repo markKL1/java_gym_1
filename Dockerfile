@@ -42,5 +42,4 @@ RUN touch src/main.rs
 
 RUN cargo build --release
 
-
 CMD ["cargo", "run", "--release"]
